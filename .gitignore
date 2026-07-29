@@ -12,3 +12,4 @@ extra/openai_models.json
 .DS_Store
 Thumbs.db
 
+venv/
