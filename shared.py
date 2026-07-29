@@ -87,12 +87,31 @@ def getAllOpenAiModels():
     with open('extra/openai_models.json', 'w') as f:
         json.dump(allModal, f, indent=4)
 
+
+# Models from your list that support the OpenRouter web search tool plugin safely
+SUPPORTED_SEARCH_MODELS = {
+    "inclusionai/ling-3.0-flash:free",
+    "poolside/laguna-s-2.1:free",
+    "poolside/laguna-xs-2.1:free",
+    "cohere/north-mini-code:free",
+    "nvidia/nemotron-3.5-content-safety:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
+    "nvidia/nemotron-nano-12b-v2-vl:free",
+    "nvidia/nemotron-nano-9b-v2:free",
+    "openai/gpt-oss-20b:free"
+}
+
 # --- Main FastAPI AI Caller ---
 async def ask_ai_structured(
     question: str, 
     schema: dict, 
     system_prompt: str = "You are a logical problem solver.",
-    MODEL_ID: str = "meta-llama/llama-3.3-70b-instruct:free", 
+    MODEL_ID: str = "nvidia/nemotron-3-ultra-550b-a55b:free", 
     use_openai: bool = False
 ) -> dict:
     start_time = time.perf_counter()
@@ -112,6 +131,10 @@ async def ask_ai_structured(
             "timeout": 60.0 
         }
         
+        # Safely add the search tool ONLY if the model is in our approved search-capable list and we aren't using OpenAI directly
+        if not use_openai and MODEL_ID in SUPPORTED_SEARCH_MODELS:
+            kwargs["tools"] = [{"type": "openrouter:web_search"}]
+        
         if use_openai:
             kwargs["response_format"] = {
                 "type": "json_schema",
@@ -122,14 +145,12 @@ async def ask_ai_structured(
                 }
             }
             
-        # Await the async network call
         response = await client.chat.completions.create(**kwargs)
         raw_answer = response.choices[0].message.content
         
         if not raw_answer:
             raise HTTPException(status_code=500, detail="LLM returned an empty response")
             
-        # Robust JSON extraction for OpenRouter markdown artifacts
         start_idx = raw_answer.find('{')
         end_idx = raw_answer.rfind('}')
         if start_idx != -1 and end_idx != -1:
@@ -144,7 +165,7 @@ async def ask_ai_structured(
     finally:
         elapsed = time.perf_counter() - start_time
         print(f"Request to '{MODEL_ID}' took {elapsed:.2f} seconds")
-
+        
 if __name__ == "__main__":
     getAllOpenRouterFreeModels()
     getAllOpenAiModels()
