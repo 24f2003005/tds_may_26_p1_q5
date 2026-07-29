@@ -1,0 +1,14 @@
+# Python bytecode and cache
+__pycache__/
+.env
+
+extra/tgchat/*.jsonl
+extra/openrouter_free.json
+extra/openai_models.json
+
+# IDE / OS specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
